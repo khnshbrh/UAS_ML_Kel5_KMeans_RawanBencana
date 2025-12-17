@@ -3,6 +3,7 @@ pandas
 numpy
 matplotlib.pyplot
 seaborn
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
+StandardScaler
+PCA
+KMeans
+
