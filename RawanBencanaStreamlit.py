@@ -166,7 +166,7 @@ RISK_LEVEL = {
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🎛 Navigasi")
-    menu = st.radio("Pilih Halaman:", ["Dashboard Statistik", "Cek Riwayat & Tren", "Simulasi Wilayah Baru"])
+    menu = st.radio("Pilih Halaman:", ["Dashboard Statistik", "Cek Riwayat & Tren"])
     st.divider()
     st.caption("Data Provinsi: 2016-2020")
 
@@ -258,23 +258,3 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
-
-# --- HALAMAN 3: SIMULASI ---
-elif menu == "Simulasi Wilayah Baru":
-    st.title("🧮 Simulasi Prediksi")
-    with st.form("sim"):
-        c1, c2, c3 = st.columns(3)
-        v_men = c1.number_input("Meninggal", 0)
-        v_kej = c1.number_input("Jumlah Kejadian", 0)
-        v_luk = c1.number_input("Terluka", 0)
-        v_der = c2.number_input("Menderita", 0)
-        v_ung = c2.number_input("Mengungsi", 0)
-        v_rb  = c2.number_input("Rusak Berat", 0)
-        v_rs  = c3.number_input("Rusak Sedang", 0)
-        v_rr  = c3.number_input("Rusak Ringan", 0)
-        v_dam = c3.number_input("Terendam", 0)
-        
-        if st.form_submit_button("Prediksi"):
-            vec = np.array([[v_men, v_kej, v_luk, v_der, v_ung, v_rb, v_rs, v_rr, v_dam]])
-            pred = model.predict(scaler.transform(vec))[0]
-            st.success(f"Hasil: Cluster {pred} - {RISK_LEVEL[pred]}")
