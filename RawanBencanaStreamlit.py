@@ -187,10 +187,10 @@ if menu == "Dashboard Statistik":
     
     if df_model is not None and not df_model.empty:
         stats = df_model.groupby('Cluster')[FEATURES].mean().reset_index()
-        stats['Jml Data'] = df_model['Cluster'].value_counts().sort_index().values
+        stats['Jumlah Data'] = df_model['Cluster'].value_counts().sort_index().values
         stats['Risiko'] = stats['Cluster'].map(RISK_LEVEL)
         
-        cols = ['Cluster', 'Risiko', 'Jml Data', 'Meninggal', 'Mengungsi', 'Rusak Berat', 'Jumlah Kejadian']
+        cols = ['Cluster', 'Risiko', 'Jumlah Data', 'Meninggal', 'Mengungsi', 'Rusak Berat', 'Jumlah Kejadian']
         st.dataframe(stats[cols].style.background_gradient(cmap='Reds', subset=['Meninggal', 'Mengungsi']), hide_index=True, use_container_width=True)
         
         col_pca, col_txt = st.columns([2, 1])
@@ -258,4 +258,5 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
+
 
