@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="Sistem Analisis Risiko Bencana",
+    page_title="KLASIKA",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -165,7 +165,7 @@ RISK_LEVEL = {
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("🎛 Navigasi")
+    st.title("🔍 Eksplorasi Data")
     menu = st.radio("Pilih Halaman:", ["Dashboard Statistik", "Cek Riwayat & Tren"])
     st.divider()
     st.caption("Data Provinsi: 2016-2020")
@@ -258,3 +258,4 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
+
