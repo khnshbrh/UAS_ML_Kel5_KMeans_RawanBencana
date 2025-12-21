@@ -139,24 +139,58 @@ def load_data_tahunan():
 df_total = load_data_total()
 df_tahunan = load_data_tahunan()
 
-# Training Model
+# --- TRAINING MODEL (DENGAN AUTO-MAPPING) ---
 @st.cache_resource
 def train_model(df):
     if df.empty: return None, None, None, None
     X = df[FEATURES]
     scaler = StandardScaler()
     scaled = scaler.fit_transform(X)
+    
+    # 1. K-Means
     kmeans = KMeans(n_clusters=OPTIMAL_K, random_state=42, n_init='auto')
-    df['Cluster'] = kmeans.fit_predict(scaled)
+    raw_labels = kmeans.fit_predict(scaled)
+    df['Temp_Cluster'] = raw_labels
+    
+    # 2. LOGIKA MAPPING (Agar Sesuai Definisi Laporan)
+    centroids = df.groupby('Temp_Cluster')[FEATURES].mean()
+    
+    # Cari C1 (Menengah): Freq Paling Tinggi (Jabar/Jateng)
+    idx_c1 = centroids['Jumlah Kejadian'].idxmax()
+    
+    # Cari C3 (Ekstrem): Rusak Berat Paling Tinggi (Aceh - Anomali)
+    remaining = centroids.drop(index=[idx_c1])
+    idx_c3 = remaining['Rusak Berat'].idxmax()
+    
+    # Cari C0 (Rendah): Total Dampak Paling Minim
+    remaining = remaining.drop(index=[idx_c3])
+    idx_c0 = remaining.sum(axis=1).idxmin()
+    
+    # Sisanya PASTI C2 (Tinggi): Dampak Signifikan (DKI/Banjir)
+    remaining = remaining.drop(index=[idx_c0])
+    # Handle jika C2 kosong (jarang terjadi tapi aman untuk dicek)
+    idx_c2 = remaining.index[0] if not remaining.empty else [x for x in range(4) if x not in [idx_c0, idx_c1, idx_c3]][0]
+    
+    mapping = {
+        idx_c0: 0, # Risiko Rendah
+        idx_c1: 1, # Risiko Menengah
+        idx_c2: 2, # Risiko Tinggi
+        idx_c3: 3  # Risiko Ekstrem
+    }
+    
+    df['Cluster'] = df['Temp_Cluster'].map(mapping)
+    df = df.drop(columns=['Temp_Cluster'])
     
     pca = PCA(n_components=2)
     pcs = pca.fit_transform(scaled)
     pca_df = pd.DataFrame(pcs, columns=['PC1', 'PC2'])
     pca_df['Cluster'] = df['Cluster']
+    
     return df, scaler, kmeans, pca_df
 
 df_model, scaler, model, pca_df = train_model(df_tahunan.copy())
 
+# --- DEFINISI RISIKO SESUAI LAPORAN ---
 RISK_LEVEL = {
     0: "Cluster 0 (Risiko Rendah)",
     1: "Cluster 1 (Risiko Menengah)",
@@ -212,25 +246,26 @@ if menu == "Statistik Bencana":
         stats['Jumlah Data'] = df_model['Cluster'].value_counts().sort_index().values
         stats['Risiko'] = stats['Cluster'].map(RISK_LEVEL)
         
+        # Format angka bulat (integer) agar lebih mudah dibaca
         cols = ['Cluster', 'Risiko', 'Jumlah Data', 'Jumlah Kejadian', 'Meninggal', 'Terluka', 'Menderita', 'Mengungsi', 'Rusak Berat', 'Rusak Sedang', 'Rusak Ringan', 'Terendam']
-        st.dataframe(stats[cols].round(2), hide_index=True, use_container_width=True)
+        st.dataframe(stats[cols].round(0).astype({'Jumlah Kejadian': int, 'Meninggal': int}), hide_index=True, use_container_width=True)
         
         # --- TAMBAHAN VISUALISASI PETA INDONESIA ---
         st.subheader("🗺️ Sebaran Risiko Berdasarkan Wilayah")
-        
-        # Siapkan data untuk peta
-        map_df = df_model.groupby('Provinsi')['Cluster'].last().reset_index() # Ambil status cluster terakhir
+    
+        map_df = df_model.groupby('Provinsi')['Cluster'].max().reset_index()
+
         map_df['lat'] = map_df['Provinsi'].map(lambda x: PROV_COORDS.get(x, {}).get('lat'))
         map_df['lon'] = map_df['Provinsi'].map(lambda x: PROV_COORDS.get(x, {}).get('lon'))
         map_df['Risiko'] = map_df['Cluster'].map(RISK_LEVEL)
-        
-        # Hapus data yang koordinatnya tidak ditemukan
         map_df = map_df.dropna(subset=['lat', 'lon'])
 
         fig_map = px.scatter_mapbox(
             map_df, lat="lat", lon="lon", color="Cluster",
-            size=map_df['Cluster'] + 2, # Ukuran titik
-            color_continuous_scale="Reds",
+            size=map_df['Cluster'].replace(0, 0.5) + 2, # Ukuran titik disesuaikan
+            # Warna manual: 0=Hijau, 1=Kuning, 2=Oranye, 3=Merah
+            color_continuous_scale=["#28a745", "#ffc107", "#fd7e14", "#dc3545"], 
+            range_color=[0, 3], # Kunci range warna agar Cluster 2 (Oranye) pasti muncul
             hover_name="Provinsi",
             hover_data={"Risiko": True, "Cluster": True, "lat": False, "lon": False},
             zoom=3.5, center={"lat": -2.5, "lon": 118},
@@ -245,7 +280,14 @@ if menu == "Statistik Bencana":
             sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='viridis', s=100, ax=ax)
             st.pyplot(fig)
         with col_txt:
-            st.info("*Penjelasan Kluster:*\n- Cluster 0:  Kejadian dengan intensitas sedang dan dampak kerusakan menengah.\n- Cluster 1: Kejadian yang sering terjadi namun dengan angka fatalitas (korban jiwa) yang relatif rendah.\n- Cluster 2: Kejadian yang memiliki dampak pengungsian sangat signifikan.\n- Cluster 3: Kejadian ekstrem yang mengakibatkan korban jiwa massal atau kerusakan infrastruktur yang sangat masif.")
+            st.info("""
+            **Penjelasan Kluster (Profil Risiko):**
+            
+            - **Cluster:** Risiko Rendah, dengan frekuensi kejadian sedikit dengan korban jiwa dan kerusakan infrastruktur yang sangat minim.
+            - **Cluster 1:** Risiko Menengah, dengan frekuensi kejadian sangat tinggi, namun dampak korban jiwa relatif terkendali dibanding jumlah kejadiannya.
+            - **Cluster 2:** Risiko Tinggi, dengan dampak sosial tinggi, terutama pada jumlah pengungsi dan wilayah terendam banjir yang luas.
+            - **Cluster 3:** Risiko Ekstrem dengan tingkat kerusakan bangunan dan jumlah pengungsi yang sangat ekstrem.
+            """)
 
 # --- HALAMAN 2: CEK RIWAYAT (SCROLLDOWN) ---
 elif menu == "Cek Riwayat & Tren":
@@ -292,9 +334,9 @@ elif menu == "Cek Riwayat & Tren":
                 # Mengambil hanya kolom fitur untuk ditampilkan di tabel
                 display_row = row[FEATURES].copy()
     
-                # Menampilkan dataframe agar rapi seperti bagian statistik kluster
+                # Menampilkan dataframe agar rapi seperti bagian statistik kluster (Bulat)
                 st.dataframe(
-                    display_row.round(2), 
+                    display_row.round(0).astype(int), 
                     hide_index=True, 
                     use_container_width=True
                 )
@@ -308,5 +350,3 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
-
-
