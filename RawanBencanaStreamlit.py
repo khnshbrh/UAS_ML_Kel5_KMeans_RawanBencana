@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
@@ -157,22 +158,43 @@ def train_model(df):
 df_model, scaler, model, pca_df = train_model(df_tahunan.copy())
 
 RISK_LEVEL = {
-    0: "Cluster 0 (Risiko Menengah)",
-    1: "Cluster 1 (Risiko Rendah)",
+    0: "Cluster 0 (Risiko Rendah)",
+    1: "Cluster 1 (Risiko Menengah)",
     2: "Cluster 2 (Risiko Tinggi)",
     3: "Cluster 3 (Risiko Ekstrem)"
+}
+
+# Koordinat sederhana untuk pemetaan (Pusat Provinsi)
+PROV_COORDS = {
+    "Aceh": {"lat": 4.6951, "lon": 96.7494}, "Sumatera Utara": {"lat": 2.1121, "lon": 99.3982},
+    "Sumatera Barat": {"lat": -0.7399, "lon": 100.8000}, "Riau": {"lat": 0.2933, "lon": 101.7068},
+    "Jambi": {"lat": -1.6101, "lon": 103.6131}, "Sumatera Selatan": {"lat": -3.3194, "lon": 104.9145},
+    "Bengkulu": {"lat": -3.7928, "lon": 102.2608}, "Lampung": {"lat": -4.5586, "lon": 105.4068},
+    "Kepulauan Bangka Belitung": {"lat": -2.7410, "lon": 106.4406}, "Kepulauan Riau": {"lat": 3.9456, "lon": 108.1429},
+    "DKI Jakarta": {"lat": -6.2088, "lon": 106.8456}, "Jawa Barat": {"lat": -7.0909, "lon": 107.6689},
+    "Jawa Tengah": {"lat": -7.1510, "lon": 110.1403}, "Daerah Istimewa Yogyakarta": {"lat": -7.8753, "lon": 110.4262},
+    "Jawa Timur": {"lat": -7.5361, "lon": 112.2384}, "Banten": {"lat": -6.4058, "lon": 106.0640},
+    "Bali": {"lat": -8.4095, "lon": 115.1889}, "Nusa Tenggara Barat": {"lat": -8.6529, "lon": 117.3616},
+    "Nusa Tenggara Timur": {"lat": -8.6574, "lon": 121.0794}, "Kalimantan Barat": {"lat": -0.2787, "lon": 109.9754},
+    "Kalimantan Tengah": {"lat": -1.6815, "lon": 113.3824}, "Kalimantan Selatan": {"lat": -3.0926, "lon": 115.2838},
+    "Kalimatan Timur": {"lat": 0.4538, "lon": 116.2420}, "Kalimantan Utara": {"lat": 3.0731, "lon": 116.0414},
+    "Sulawesi Utara": {"lat": 0.6247, "lon": 123.9750}, "Sulawesi Tengah": {"lat": -1.4300, "lon": 121.4456},
+    "Sulawesi Selatan": {"lat": -3.6688, "lon": 119.9740}, "Sulawesi Tenggara": {"lat": -4.1449, "lon": 122.1746},
+    "Gorontalo": {"lat": 0.6999, "lon": 122.4467}, "Sulawesi Barat": {"lat": -2.8440, "lon": 119.2321},
+    "Maluku": {"lat": -3.2385, "lon": 130.1453}, "Maluku Utara": {"lat": 1.5700, "lon": 127.8000},
+    "Papua": {"lat": -4.2699, "lon": 138.0804}
 }
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🔍 Eksplorasi Data")
-    menu = st.radio("Pilih Halaman:", ["Dashboard Statistik", "Cek Riwayat & Tren"])
+    menu = st.radio("Pilih Halaman:", ["Statistik Bencana", "Cek Riwayat & Tren"])
     st.divider()
     st.caption("Data Provinsi: 2016-2020")
 
 # --- HALAMAN 1: DASHBOARD ---
-if menu == "Dashboard Statistik":
-    st.title("📊 Dashboard Statistik Bencana")
+if menu == "Statistik Bencana":
+    st.title("📊 KLASIKA: Klasterisasi Risiko Bencana")
     st.markdown("Sumber Data diperoleh dari Badan Nasional Penanggulangan Bencana (BNPB)")
     
     c1, c2, c3, c4 = st.columns(4)
@@ -191,8 +213,32 @@ if menu == "Dashboard Statistik":
         stats['Risiko'] = stats['Cluster'].map(RISK_LEVEL)
         
         cols = ['Cluster', 'Risiko', 'Jumlah Data', 'Meninggal', 'Mengungsi', 'Rusak Berat', 'Jumlah Kejadian']
-        st.dataframe(stats[cols].style.background_gradient(cmap='Reds', subset=['Meninggal', 'Mengungsi']), hide_index=True, use_container_width=True)
+        st.dataframe(stats[cols].round(2), hide_index=True, use_container_width=True)
         
+        # --- TAMBAHAN VISUALISASI PETA INDONESIA ---
+        st.subheader("🗺️ Sebaran Risiko Berdasarkan Wilayah")
+        
+        # Siapkan data untuk peta
+        map_df = df_model.groupby('Provinsi')['Cluster'].last().reset_index() # Ambil status cluster terakhir
+        map_df['lat'] = map_df['Provinsi'].map(lambda x: PROV_COORDS.get(x, {}).get('lat'))
+        map_df['lon'] = map_df['Provinsi'].map(lambda x: PROV_COORDS.get(x, {}).get('lon'))
+        map_df['Risiko'] = map_df['Cluster'].map(RISK_LEVEL)
+        
+        # Hapus data yang koordinatnya tidak ditemukan
+        map_df = map_df.dropna(subset=['lat', 'lon'])
+
+        fig_map = px.scatter_mapbox(
+            map_df, lat="lat", lon="lon", color="Cluster",
+            size=map_df['Cluster'] + 2, # Ukuran titik
+            color_continuous_scale="Reds",
+            hover_name="Provinsi",
+            hover_data={"Risiko": True, "Cluster": True, "lat": False, "lon": False},
+            zoom=3.5, center={"lat": -2.5, "lon": 118},
+            mapbox_style="carto-positron", height=500
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
+        # --- END TAMBAHAN PETA ---
+
         col_pca, col_txt = st.columns([2, 1])
         with col_pca:
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -244,7 +290,7 @@ elif menu == "Cek Riwayat & Tren":
                 st.markdown(f"<p style='text-align:center; font-weight:bold;'>{RISK_LEVEL[clust]}</p>", unsafe_allow_html=True)
             with cr2:
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Kejadian", f"{row['Jumlah Kejadian'].values[0]:,.0f}")
+                m1.metric("Kejadian Bencana", f"{row['Jumlah Kejadian'].values[0]:,.0f}")
                 m2.metric("Meninggal", f"{row['Meninggal'].values[0]:,.0f}")
                 m3.metric("Mengungsi", f"{row['Mengungsi'].values[0]:,.0f}")
                 m4.metric("Rusak Berat", f"{row['Rusak Berat'].values[0]:,.0f}")
@@ -258,5 +304,3 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
-
-
