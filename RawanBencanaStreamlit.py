@@ -245,7 +245,7 @@ if menu == "Statistik Bencana":
             sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='viridis', s=100, ax=ax)
             st.pyplot(fig)
         with col_txt:
-            st.info("*Penjelasan Kluster:*\n- Cluster 0:  Kejadian dengan intensitas sedang dan dampak kerusakan menengah.\n- Cluster 1: Kejadian yang sering terjadi namun dengan angka fatalitas (korban jiwa) yang relatif rendah.\n- Cluster 2: Wilayah/kejadian yang memiliki dampak pengungsian sangat signifikan.\n- Cluster 3: Kejadian ekstrem yang mengakibatkan korban jiwa massal atau kerusakan infrastruktur yang sangat masif.")
+            st.info("*Penjelasan Kluster:*\n- Cluster 0:  Kejadian dengan intensitas sedang dan dampak kerusakan menengah.\n- Cluster 1: Kejadian yang sering terjadi namun dengan angka fatalitas (korban jiwa) yang relatif rendah.\n- Cluster 2: Kejadian yang memiliki dampak pengungsian sangat signifikan.\n- Cluster 3: Kejadian ekstrem yang mengakibatkan korban jiwa massal atau kerusakan infrastruktur yang sangat masif.")
 
 # --- HALAMAN 2: CEK RIWAYAT (SCROLLDOWN) ---
 elif menu == "Cek Riwayat & Tren":
@@ -308,4 +308,5 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
+
 
