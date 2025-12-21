@@ -290,7 +290,7 @@ elif menu == "Cek Riwayat & Tren":
                 st.markdown(f"<p style='text-align:center; font-weight:bold;'>{RISK_LEVEL[clust]}</p>", unsafe_allow_html=True)
             with cr2:
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Kejadian Bencana", f"{row['Jumlah Kejadian'].values[0]:,.0f}")
+                m1.metric("Jumlah Kejadian Bencana", f"{row['Jumlah Kejadian'].values[0]:,.0f}")
                 m2.metric("Meninggal", f"{row['Meninggal'].values[0]:,.0f}")
                 m3.metric("Mengungsi", f"{row['Mengungsi'].values[0]:,.0f}")
                 m4.metric("Rusak Berat", f"{row['Rusak Berat'].values[0]:,.0f}")
@@ -304,3 +304,4 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
+
