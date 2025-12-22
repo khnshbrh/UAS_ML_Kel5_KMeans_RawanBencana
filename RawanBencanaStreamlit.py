@@ -222,7 +222,7 @@ PROV_COORDS = {
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🔍 Eksplorasi Data")
-    menu = st.radio("Pilih Halaman:", ["Statistik Bencana", "Cek Riwayat & Tren"])
+    menu = st.radio("Pilih Halaman:", ["Statistik Bencana", "Cek Riwayat Bencana & Tren"])
     st.divider()
     st.caption("Data Provinsi: 2016-2020")
 
@@ -290,7 +290,7 @@ if menu == "Statistik Bencana":
             """)
 
 # --- HALAMAN 2: CEK RIWAYAT (SCROLLDOWN) ---
-elif menu == "Cek Riwayat & Tren":
+elif menu == "Cek Riwayat Bencana & Tren":
     st.title("📅 Cek Riwayat Bencana & Tren Risiko")
     
     if df_model is None or df_model.empty:
@@ -350,4 +350,5 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
+
 
