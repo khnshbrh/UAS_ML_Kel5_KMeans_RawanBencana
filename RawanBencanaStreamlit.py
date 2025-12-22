@@ -291,7 +291,7 @@ if menu == "Statistik Bencana":
 
 # --- HALAMAN 2: CEK RIWAYAT (SCROLLDOWN) ---
 elif menu == "Cek Riwayat & Tren":
-    st.title("📅 Cek Riwayat & Tren Risiko")
+    st.title("📅 Cek Riwayat Bencana & Tren Risiko")
     
     if df_model is None or df_model.empty:
         st.error("Data Tahunan gagal dimuat. Cek file CSV.")
@@ -350,3 +350,4 @@ elif menu == "Cek Riwayat & Tren":
         ax.set_yticks(range(OPTIMAL_K))
         ax.set_xticks(prov_data['Tahun'].unique())
         st.pyplot(fig)
+
